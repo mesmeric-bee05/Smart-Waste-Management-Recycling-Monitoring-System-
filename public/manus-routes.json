@@ -1,0 +1,16 @@
+{
+  "routes": [
+    { "path": "/", "title": "WasteOps dashboard redirect" },
+    { "path": "/login", "title": "Sign in" },
+    { "path": "/report", "title": "Public collection request" },
+    { "path": "/dashboard", "title": "Operations dashboard" },
+    { "path": "/collection-points", "title": "Collection point register" },
+    { "path": "/collections", "title": "Collection schedule and work" },
+    { "path": "/recycling", "title": "Recycling metrics" },
+    { "path": "/requests", "title": "Collection request queue" },
+    { "path": "/reports", "title": "Reports and exports" },
+    { "path": "/telemetry", "title": "Simulated telemetry" },
+    { "path": "/audit", "title": "Audit log" },
+    { "path": "/settings", "title": "Workspace settings" }
+  ]
+}
