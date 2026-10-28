@@ -15,6 +15,10 @@ RUN POSTGRES_DATABASE_URL="postgresql://build:build@127.0.0.1:5432/build?schema=
     AUTH_SECRET="build-only-not-a-deployment-secret" \
     npm run build
 
+# Never copy developer or build-stage environment files into the runtime image.
+RUN find .next/standalone -type f \( -name '.env' -o -name '.env.*' \) -delete && \
+    test -z "$(find .next/standalone -type f \( -name '.env' -o -name '.env.*' \) -print -quit)"
+
 FROM node:22-bookworm-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production
