@@ -1,0 +1,92 @@
+name: WasteOps quality and security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wasteops-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  secret-scan:
+    name: Full-history secret scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # gitleaks-action v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+          GITLEAKS_ENABLE_COMMENTS: "false"
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: "false"
+
+  verify:
+    name: Application checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: wasteops
+          POSTGRES_USER: wasteops
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U wasteops -d wasteops"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      CI: "true"
+      NEXT_TELEMETRY_DISABLED: "1"
+      POSTGRES_DATABASE_URL: postgresql://wasteops@127.0.0.1:5432/wasteops?schema=public
+      AUTH_COOKIE_SECURE: "false"
+      AUTH_COOKIE_SAME_SITE: lax
+      INITIAL_ADMIN_EMAIL: admin@example.test
+      INITIAL_ADMIN_NAME: CI Administrator
+      INITIAL_SUPERVISOR_EMAIL: supervisor@example.test
+      INITIAL_COLLECTOR_EMAIL: collector@example.test
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # actions/setup-node v7
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Generate per-run authentication fixtures
+        shell: bash
+        run: |
+          {
+            printf 'AUTH_SECRET=%s\n' "$(openssl rand -hex 48)"
+            printf 'INITIAL_ADMIN_PASSWORD=%s\n' "$(openssl rand -hex 24)"
+            printf 'INITIAL_SUPERVISOR_PASSWORD=%s\n' "$(openssl rand -hex 24)"
+            printf 'INITIAL_COLLECTOR_PASSWORD=%s\n' "$(openssl rand -hex 24)"
+          } >> "$GITHUB_ENV"
+      - run: npm ci
+      - run: npm run db:generate
+      - run: npm run db:deploy
+      - run: npm run db:seed
+      - run: npm run format:check
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test -- --reporter=dot
+      - run: npx playwright install --with-deps chromium
+      - run: npm run e2e
+      - run: npm run build
+      - run: npm audit --audit-level=high

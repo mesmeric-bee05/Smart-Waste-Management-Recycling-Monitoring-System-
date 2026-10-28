@@ -1,0 +1,236 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  SUPERVISOR
+  COLLECTOR
+}
+
+enum WasteCategory {
+  PLASTIC
+  PAPER
+  GLASS
+  METAL
+  ORGANIC
+  HAZARDOUS
+  RESIDUAL
+  EWASTE
+}
+
+enum CollectionStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  MISSED
+  CANCELLED
+}
+
+enum RequestStatus {
+  OPEN
+  ACKNOWLEDGED
+  RESOLVED
+  REJECTED
+}
+
+enum DataSource {
+  SIMULATED
+  MANUAL
+  IMPORTED
+  DEVICE
+}
+
+enum DataQuality {
+  VALID
+  SUSPECT
+  STALE
+}
+
+model Organization {
+  id          String              @id @default(uuid()) @db.Uuid
+  name        String
+  slug        String              @unique
+  createdAt   DateTime            @default(now())
+  users       User[]
+  points      CollectionPoint[]
+  vehicles    Vehicle[]
+  requests    CollectionRequest[]
+  auditLogs   AuditLog[]
+  collections Collection[]
+}
+
+model User {
+  id                  String              @id @default(uuid()) @db.Uuid
+  organizationId      String              @db.Uuid
+  organization        Organization        @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  email               String              @unique
+  fullName            String
+  passwordHash        String
+  role                Role                @default(COLLECTOR)
+  isActive            Boolean             @default(true)
+  failedLoginCount    Int                 @default(0)
+  lockedUntil         DateTime?
+  lastLoginAt         DateTime?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  assignedCollections Collection[]        @relation("AssignedCollector")
+  createdCollections  Collection[]        @relation("CreatedCollection")
+  createdPoints       CollectionPoint[]   @relation("CreatedPoint")
+  handledRequests     CollectionRequest[] @relation("HandledRequest")
+  auditLogs           AuditLog[]
+
+  @@index([organizationId, role, isActive])
+}
+
+model CollectionPoint {
+  id              String              @id @default(uuid()) @db.Uuid
+  organizationId  String              @db.Uuid
+  organization    Organization        @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  code            String
+  name            String
+  address         String
+  zone            String
+  latitude        Float
+  longitude       Float
+  locationSource  DataSource          @default(MANUAL)
+  capacityLiters  Int                 @default(240)
+  wasteCategories WasteCategory[]
+  isActive        Boolean             @default(true)
+  lastEmptiedAt   DateTime?
+  createdById     String              @db.Uuid
+  createdBy       User                @relation("CreatedPoint", fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  collections     Collection[]
+  readings        BinReading[]
+  requests        CollectionRequest[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId, zone, isActive])
+}
+
+model Collection {
+  id                  String               @id @default(uuid()) @db.Uuid
+  organizationId      String               @db.Uuid
+  organization        Organization         @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  pointId             String               @db.Uuid
+  point               CollectionPoint      @relation(fields: [pointId], references: [id], onDelete: Restrict)
+  assignedCollectorId String?              @db.Uuid
+  assignedCollector   User?                @relation("AssignedCollector", fields: [assignedCollectorId], references: [id], onDelete: Restrict)
+  createdById         String               @db.Uuid
+  createdBy           User                 @relation("CreatedCollection", fields: [createdById], references: [id], onDelete: Restrict)
+  status              CollectionStatus     @default(SCHEDULED)
+  scheduledAt         DateTime
+  startedAt           DateTime?
+  completedAt         DateTime?
+  notes               String?
+  source              DataSource           @default(MANUAL)
+  isSimulated         Boolean              @default(false)
+  estimatedCo2eKg     Float                @default(0)
+  fuelUsedLiters      Float?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  materials           CollectionMaterial[]
+
+  @@index([organizationId, status, scheduledAt])
+  @@index([organizationId, assignedCollectorId, scheduledAt])
+}
+
+model CollectionMaterial {
+  id           String        @id @default(uuid()) @db.Uuid
+  collectionId String        @db.Uuid
+  collection   Collection    @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  category     WasteCategory
+  weightKg     Float
+
+  @@unique([collectionId, category])
+  @@index([category])
+}
+
+model BinReading {
+  id             String          @id @default(uuid()) @db.Uuid
+  pointId        String          @db.Uuid
+  point          CollectionPoint @relation(fields: [pointId], references: [id], onDelete: Cascade)
+  fillPct        Int
+  weightKg       Float?
+  temperatureC   Float?
+  batteryPct     Float?
+  source         DataSource      @default(SIMULATED)
+  isSimulated    Boolean         @default(true)
+  recordedAt     DateTime
+  receivedAt     DateTime        @default(now())
+  qualityStatus  DataQuality     @default(VALID)
+  idempotencyKey String          @unique
+
+  @@index([pointId, recordedAt(sort: Desc)])
+  @@index([source, recordedAt(sort: Desc)])
+}
+
+model Vehicle {
+  id             String        @id @default(uuid()) @db.Uuid
+  organizationId String        @db.Uuid
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  code           String
+  label          String
+  isActive       Boolean       @default(true)
+  pings          VehiclePing[]
+
+  @@unique([organizationId, code])
+}
+
+model VehiclePing {
+  id             String     @id @default(uuid()) @db.Uuid
+  vehicleId      String     @db.Uuid
+  vehicle        Vehicle    @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  latitude       Float
+  longitude      Float
+  recordedAt     DateTime
+  source         DataSource @default(SIMULATED)
+  isSimulated    Boolean    @default(true)
+  idempotencyKey String     @unique
+
+  @@index([vehicleId, recordedAt(sort: Desc)])
+}
+
+model CollectionRequest {
+  id             String           @id @default(uuid()) @db.Uuid
+  organizationId String           @db.Uuid
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  pointId        String?          @db.Uuid
+  point          CollectionPoint? @relation(fields: [pointId], references: [id], onDelete: SetNull)
+  requesterName  String?
+  contactEmail   String?
+  message        String
+  priority       Int              @default(2)
+  status         RequestStatus    @default(OPEN)
+  resolutionNote String?
+  handledById    String?          @db.Uuid
+  handledBy      User?            @relation("HandledRequest", fields: [handledById], references: [id], onDelete: SetNull)
+  createdAt      DateTime         @default(now())
+  resolvedAt     DateTime?
+
+  @@index([organizationId, status, createdAt(sort: Desc)])
+}
+
+model AuditLog {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  actorId        String?      @db.Uuid
+  actor          User?        @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  action         String
+  entityType     String
+  entityId       String?
+  metadata       Json         @default("{}")
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId, createdAt(sort: Desc)])
+  @@index([actorId, createdAt(sort: Desc)])
+  @@index([entityType, entityId])
+}
