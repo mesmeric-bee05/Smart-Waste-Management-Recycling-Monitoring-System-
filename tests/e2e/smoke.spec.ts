@@ -7,10 +7,53 @@ async function signIn(page: Page, emailVariable: string, passwordVariable: strin
   if (!email || !password) throw new Error(`${emailVariable} and ${passwordVariable} must be set for E2E.`);
   await page.goto("/login");
   await page.getByLabel("Work email").fill(email);
-  await page.getByLabel("Password").fill(password);
+  await page.getByRole("textbox", { name: "Password" }).fill(password);
   await page.getByRole("button", { name: "Sign in securely" }).click();
   await expect(page).toHaveURL(/\/dashboard(?:\?.*)?$/, { timeout: 20_000 });
 }
+
+test("public landing routes staff and resident actions and labels its illustrative data", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByRole("heading", { name: "Make every collection count." })).toBeVisible();
+  await expect(page.getByText("SIMULATED", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText(/Fictional example values only/)).toBeVisible();
+  await expect(page.getByRole("link", { name: /Staff sign in/i }).first()).toHaveAttribute("href", "/login");
+  await expect(page.getByRole("link", { name: "Submit a collection request" })).toHaveAttribute(
+    "href",
+    "/report",
+  );
+
+  const accessibility = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+    .analyze();
+  expect(accessibility.violations.map(({ id, impact, help }) => ({ id, impact, help }))).toEqual([]);
+
+  await page.getByRole("link", { name: "Submit a collection request" }).click();
+  await expect(page).toHaveURL(/\/report$/);
+});
+
+test("staff sign-in is invitation-only and the password visibility control works", async ({ page }) => {
+  await page.goto("/login");
+  await expect(page.getByRole("heading", { name: "Sign in to WasteOps" })).toBeVisible();
+  await expect(page.getByText(/there is no public self-sign-up/i)).toBeVisible();
+
+  const password = page.getByRole("textbox", { name: "Password" });
+  const reveal = page.getByRole("button", { name: "Show password" });
+  await expect(password).toHaveAttribute("type", "password");
+  await reveal.click();
+  await expect(password).toHaveAttribute("type", "text");
+  await expect(page.getByRole("button", { name: "Hide password" })).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "Hide password" }).click();
+  await expect(password).toHaveAttribute("type", "password");
+
+  const accessibility = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+    .analyze();
+  expect(accessibility.violations.map(({ id, impact, help }) => ({ id, impact, help }))).toEqual([]);
+});
 
 test("resident can submit a fictional public request and receives a safe reference", async ({ page }) => {
   await page.goto("/report");

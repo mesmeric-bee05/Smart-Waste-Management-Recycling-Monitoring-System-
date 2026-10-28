@@ -1,6 +1,6 @@
 # Delivery Outcomes
 
-## 1. Responsive, accessible application shell and navigation — implemented; manual mobile/device review open
+## 1. Responsive, accessible application shell and navigation — implemented; desktop/mobile visual review complete; customer/device UAT open
 
 Acceptance: provides a coherent operations experience for administrator, supervisor, and collector roles; works across desktop/tablet/mobile; includes clear loading, empty and error states, keyboard operation, visible focus, readable contrast, reduced-motion behavior, and non-color status cues.
 
@@ -36,12 +36,16 @@ Acceptance: map and simple route preview function with accessible list/text alte
 
 Acceptance: authorized users can generate period reports with filters, totals, per-zone and per-category summaries, generation timestamp, and actor; CSV formula prefixes are safely escaped; export permissions are checked server-side and exports are audited; no unauthorized personal data is included.
 
-## 10. Documentation, automated checks, release, and repository delivery — partially complete; GitHub handoff remains blocked
+## 10. Documentation, automated checks, release, and repository delivery — in progress; destination push/CI receipt pending
 
-Acceptance: README covers setup, environment variables, scripts, fictional demo access (only if seeded securely), and run instructions; docs describe architecture, data model, threat model, test identifiers, simulation boundaries, deployment, operations, and future work. CI runs formatting/lint/type checks/tests/build plus available dependency/secret scans. Report actual check outcomes accurately. Commit and push the completed project to the user-specified GitHub repository without secrets or production data.
+Acceptance: README covers setup, environment variables, scripts, fictional demo access (only if seeded securely), and run instructions; docs describe architecture, data model, threat model, test identifiers, simulation boundaries, deployment, operations, and future work. CI runs formatting/lint/type checks/tests/build plus available dependency/secret scans. Report actual check outcomes accurately. Commit and push the completed project to the user-specified GitHub repository without secrets or production data. Preserve the existing destination `main` history and `LICENSE`; do not force-push or change the bound WebDev canonical repository.
+
+## 11. Public landing and secure sign-in redesign — implemented; six browser tests and public-route axe scans passed
+
+Acceptance: replace the root dashboard redirect with a clear, responsive public landing page that explains the software-only operations scope; staff-sign-in CTAs lead to `/login`, and the public collection-request CTA leads to `/report`. Redesign the sign-in surface for desktop, tablet, and mobile; keep the existing real credential flow, generic authentication errors, pending feedback, and role-based authorization. Include an accessible password show/hide control. Account creation remains administrator-provisioned and invitation-only; do not add public self-registration or unauthenticated role selection. Every new link/button must perform its stated action, all simulated/illustrative values must be unmistakably labeled as not live, and optional 3D-style movement must flatten/stop for `prefers-reduced-motion` and must not block the core routes.
 
 ## Remaining gates
 
-The project is bound to the Manus-managed repository. The supported canonical-transfer flow cannot adopt the user's already-existing GitHub repository. No push to the named GitHub target was performed and no remote was changed; the target still requires an authorized supported transfer path. The added GitHub Actions workflow and Gitleaks scan have not run on that repository.
+The source project remains bound to its Manus-managed repository; the named GitHub repository is a separate public destination explicitly selected by the user for source delivery. Its baseline was verified as `main` at `a7550ea` with only `LICENSE`; that history and file will be preserved. The authorized GitHub push, post-push action results, and final SHA receipt remain pending until a successful non-force push and SHA verification.
 
-Local evidence and environment limits are recorded in `docs/TESTING.md`. The optimized application build, local PostgreSQL migrations/seed, tests, formatting, lint, and dependency audit passed. The container image could not be built because Docker is unavailable in this sandbox. Production use remains blocked on a stable approved identity provider, customer-provisioned PostgreSQL and secrets, and customer security review; there is no live IoT/GPS integration or publication.
+Final local evidence is recorded in `docs/TESTING.md`: 14/14 Vitest tests, 6/6 Playwright tests, WCAG 2.1 A/AA axe scans with no violations on the public pages/dashboard, clean strict TypeScript, lint, formatting, optimized build, and 0 high/critical npm audit vulnerabilities. The served Preview health endpoint and all public entry routes respond correctly, and its 12-route manifest matches current App Router pages. The container image could not be built because Docker is unavailable in this sandbox. Production use remains blocked on a stable approved identity provider, customer-provisioned PostgreSQL and secrets, customer security review, and UAT; there is no live IoT/GPS integration or production publication.

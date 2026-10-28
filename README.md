@@ -78,7 +78,7 @@ The browser suite needs a migrated and seeded disposable PostgreSQL database, th
 
 ## Key routes
 
-Public: `/login`, `/report`. Authenticated: `/dashboard`, `/collection-points`, `/collections`, `/recycling`, `/telemetry`, `/requests`, `/reports`, `/audit` (Admin only) and `/settings` (Admin only). APIs include `POST /api/requests`, authorized `GET /api/reports/export`, simulation controls and the non-sensitive `/api/health`. Page routes are listed in `public/manus-routes.json`; APIs are intentionally excluded from that page manifest.
+Public: `/` (operations overview), `/login` (invitation-only staff sign-in), `/report` (resident request). Staff accounts are created by an organization administrator; public self-registration is disabled. Authenticated: `/dashboard`, `/collection-points`, `/collections`, `/recycling`, `/telemetry`, `/requests`, `/reports`, `/audit` (Admin only) and `/settings` (Admin only). APIs include `POST /api/requests`, authorized `GET /api/reports/export`, simulation controls and the non-sensitive `/api/health`. Page routes are listed in `public/manus-routes.json`; APIs are intentionally excluded from that page manifest.
 
 ## Environment
 

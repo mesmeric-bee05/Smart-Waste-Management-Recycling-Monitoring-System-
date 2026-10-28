@@ -1,7 +1,7 @@
 {
   "routes": [
-    { "path": "/", "title": "WasteOps dashboard redirect" },
-    { "path": "/login", "title": "Sign in" },
+    { "path": "/", "title": "WasteOps public operations landing" },
+    { "path": "/login", "title": "Staff sign in" },
     { "path": "/report", "title": "Public collection request" },
     { "path": "/dashboard", "title": "Operations dashboard" },
     { "path": "/collection-points", "title": "Collection point register" },

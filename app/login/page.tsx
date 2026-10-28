@@ -1,57 +1,68 @@
+import type { Metadata } from "next";
 import Link from "next/link";
-import { Recycle } from "lucide-react";
+import { redirect } from "next/navigation";
+import { ArrowLeft, ArrowUpRight, LockKeyhole, Recycle, ShieldCheck } from "lucide-react";
 import { auth } from "@/auth";
 import { LoginForm } from "@/components/login-form";
 
+export const metadata: Metadata = { title: "Staff sign in" };
+
 export default async function LoginPage() {
   const session = await auth();
-  if (session?.user?.id)
-    return (
-      <main className="login-panel">
-        <div className="login-box">
-          <h2>You’re already signed in</h2>
-          <p>Your session is active.</p>
-          <Link className="button button-primary" href="/dashboard">
-            Continue to operations
-          </Link>
-        </div>
-      </main>
-    );
+  if (session?.user?.id) redirect("/dashboard");
+
   return (
-    <main className="login-screen">
-      <section className="login-art" aria-label="WasteOps platform introduction">
-        <Link className="brand" href="/login" style={{ padding: 0, border: 0, color: "inherit" }}>
-          <span className="brand-mark">
-            <Recycle size={22} />
+    <div className="signin-page">
+      <header className="signin-header">
+        <Link className="signin-brand" href="/" aria-label="WasteOps home">
+          <span className="signin-brand__mark" aria-hidden="true">
+            <Recycle size={18} />
           </span>
-          <strong className="brand-name">WasteOps</strong>
+          <span>WasteOps</span>
         </Link>
-        <div>
-          <p className="eyebrow" style={{ color: "#91dbc7" }}>
-            Collection & recycling operations
-          </p>
-          <h1>Run collection with clarity.</h1>
-          <p>
-            Keep schedules, material weights, requests and operational reporting in one accountable workspace.
-          </p>
-        </div>
-        <small style={{ color: "#a8c4bb" }}>Software MVP · Simulation data is identified everywhere</small>
-      </section>
-      <section className="login-panel">
-        <div className="login-box">
-          <p className="eyebrow">Team workspace</p>
-          <h2>Sign in to WasteOps</h2>
-          <p>Use your organization-issued account. There is no public registration.</p>
-          <LoginForm />
-          <div className="login-footnote">
-            No live sensors, vehicle GPS, dispatch or industrial controls are connected in this software-only
-            MVP.
+        <Link className="signin-header__back" href="/">
+          <ArrowLeft size={14} aria-hidden="true" /> Back to overview
+        </Link>
+      </header>
+
+      <main className="signin-main">
+        <section className="signin-card" aria-labelledby="signin-title">
+          <div className="signin-card__icon" aria-hidden="true">
+            <LockKeyhole size={20} />
           </div>
-          <p style={{ marginTop: 18, fontSize: 11, color: "var(--ink-muted)" }}>
-            <Link href="/report">Submit a collection request without signing in</Link>
+          <p className="signin-card__eyebrow">SECURE STAFF WORKSPACE</p>
+          <h1 id="signin-title">Sign in to WasteOps</h1>
+          <p className="signin-card__intro">
+            Continue with the organization-issued account provided by your administrator.
           </p>
-        </div>
-      </section>
-    </main>
+
+          <LoginForm />
+
+          <div className="signin-access-note">
+            <ShieldCheck size={17} aria-hidden="true" />
+            <p>
+              <strong>Invitation-only access.</strong> Staff accounts are created by your organization
+              administrator; there is no public self-sign-up.
+            </p>
+          </div>
+
+          <div className="signin-public-link">
+            <span>Looking to report a collection issue?</span>
+            <Link href="/report">
+              Submit a public request <ArrowUpRight size={14} aria-hidden="true" />
+            </Link>
+          </div>
+        </section>
+        <p className="signin-boundary-note">
+          Software-only MVP · No live sensors, vehicle GPS, fleet dispatch, or industrial controls are
+          connected.
+        </p>
+      </main>
+
+      <footer className="signin-footer">
+        <span>WasteOps</span>
+        <span>Collection activity, clearly recorded.</span>
+      </footer>
+    </div>
   );
 }
