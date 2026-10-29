@@ -1,7 +1,9 @@
 "use client";
 
-import { Canvas } from "@react-three/fiber";
+import { useRef } from "react";
+import { Canvas, useFrame } from "@react-three/fiber";
 import { ContactShadows, OrbitControls } from "@react-three/drei";
+import type { Group } from "three";
 
 function Bin({ fillPct }: { fillPct: number }) {
   const fill = Math.max(0.05, Math.min(1, fillPct / 100));
@@ -32,6 +34,30 @@ function Bin({ fillPct }: { fillPct: number }) {
   );
 }
 
+function BinReveal({ fillPct, reduceMotion }: { fillPct: number; reduceMotion: boolean }) {
+  const group = useRef<Group>(null);
+  const startedAt = useRef<number | null>(null);
+
+  useFrame(({ clock, invalidate }) => {
+    if (reduceMotion || !group.current) return;
+    startedAt.current ??= clock.elapsedTime;
+    const elapsed = clock.elapsedTime - startedAt.current;
+    const duration = 2.2;
+    if (elapsed >= duration) {
+      group.current.rotation.y = 0;
+      return;
+    }
+    group.current.rotation.y = Math.sin((elapsed / duration) * Math.PI) * 0.16;
+    invalidate();
+  });
+
+  return (
+    <group ref={group}>
+      <Bin fillPct={fillPct} />
+    </group>
+  );
+}
+
 export default function BinVisualizationScene({
   fillPct,
   reduceMotion,
@@ -45,12 +71,12 @@ export default function BinVisualizationScene({
       camera={{ position: [3.2, 2.4, 3.2], fov: 42 }}
       dpr={[1, 1.4]}
       gl={{ antialias: true, powerPreference: "low-power" }}
-      aria-label="Illustrative simulated bin fill visualization"
+      aria-hidden="true"
     >
       <color attach="background" args={["#eaf3ef"]} />
       <ambientLight intensity={1.4} />
       <directionalLight position={[3, 4, 3]} intensity={2} />
-      <Bin fillPct={fillPct} />
+      <BinReveal fillPct={fillPct} reduceMotion={reduceMotion} />
       <ContactShadows position={[0, -0.85, 0]} opacity={0.28} scale={5} blur={2} far={2} />
       <OrbitControls enablePan={false} enableZoom={false} enableRotate={!reduceMotion} autoRotate={false} />
     </Canvas>

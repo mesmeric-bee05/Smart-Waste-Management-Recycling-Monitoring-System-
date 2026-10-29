@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import dynamic from "next/dynamic";
+import { useReducedMotion } from "framer-motion";
 import { Eye, EyeOff, Route } from "lucide-react";
 import { greedyPreview, type RoutePoint } from "@/domain/routing";
 
@@ -17,6 +18,7 @@ const RouteScene = dynamic(() => import("@/components/route-visualization-scene"
 export function RoutePreview({ points }: { points: RoutePoint[] }) {
   const [startId, setStartId] = useState(points[0]?.id ?? "");
   const [show3d, setShow3d] = useState(false);
+  const reduceMotion = useReducedMotion() ?? false;
   const route = useMemo(() => greedyPreview(points, startId), [points, startId]);
   const total = route.reduce((sum, point) => sum + point.legKm, 0);
   if (!points.length)
@@ -67,7 +69,8 @@ export function RoutePreview({ points }: { points: RoutePoint[] }) {
             {show3d ? "Disable 3D route" : "Optional 3D route"}
           </button>
           <span className="field-help">
-            3D is off by default; the ordered list below is the accessible alternative.
+            3D is off by default. One short route trace plays when enabled; reduced-motion settings skip it.
+            The ordered list below remains available.
           </span>
         </div>
         {show3d && route.length >= 2 && (
@@ -80,7 +83,10 @@ export function RoutePreview({ points }: { points: RoutePoint[] }) {
               background: "#eaf3ef",
             }}
           >
-            <RouteScene points={route.map(({ latitude, longitude }) => ({ latitude, longitude }))} />
+            <RouteScene
+              points={route.map(({ latitude, longitude }) => ({ latitude, longitude }))}
+              reduceMotion={reduceMotion}
+            />
           </div>
         )}
         <ol className="route-list" aria-label="Suggested collection visit order">
