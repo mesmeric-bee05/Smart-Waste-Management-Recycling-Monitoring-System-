@@ -82,7 +82,7 @@ Public: `/` (operations overview), `/login` (invitation-only staff sign-in), `/r
 
 ## Environment
 
-See `.env.example`. The app expects `POSTGRES_DATABASE_URL`, `AUTH_SECRET`, explicit `AUTH_COOKIE_SECURE`/`AUTH_COOKIE_SAME_SITE` settings and the initial seed account values. For local HTTP use secure `false` and same-site `lax`. For public HTTPS inside the cross-site Manus Preview frame, set secure `true` and same-site `none` in that preview environment; for a normal first-party HTTPS production site, use secure cookies and an appropriate first-party SameSite policy. Never infer these cookie settings from `NODE_ENV` or an internal proxy request. Third-party-cookie restrictions may still affect embedded Preview.
+See `.env.example`. The app expects `POSTGRES_DATABASE_URL`, `AUTH_SECRET`, explicit `AUTH_COOKIE_SECURE`/`AUTH_COOKIE_SAME_SITE` settings and the initial seed account values. `POSTGRES_MIGRATION_DATABASE_URL` is optional and must only be used with the explicit initial-migration gate for an approved isolated/new database; it uses a separate migration role, must target the same database/schema as the runtime URL, and is removed from the Next.js process environment before startup. Never run the gate or seed against Production without a separate approved release. For local HTTP use secure `false` and same-site `lax`. For public HTTPS inside the cross-site Manus Preview frame, set secure `true` and same-site `none` in that preview environment; for a normal first-party HTTPS production site, use secure cookies and an appropriate first-party SameSite policy. Never infer these cookie settings from `NODE_ENV` or an internal proxy request. Third-party-cookie restrictions may still affect embedded Preview.
 
 ## Architecture and operations
 

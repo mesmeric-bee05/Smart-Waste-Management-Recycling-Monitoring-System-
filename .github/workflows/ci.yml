@@ -50,44 +50,243 @@ jobs:
     name: Runtime container build and smoke test
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: wasteops
+          POSTGRES_USER: wasteops
+          POSTGRES_PASSWORD: ${{ github.run_id }}-wasteops-ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U wasteops -d wasteops"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # actions/checkout v7
         with:
           persist-credentials: false
       - name: Build runtime image
         run: docker build --tag wasteops:ci .
-      - name: Smoke-test public route and environment-file exclusion
+      - name: Test gated migrations, public route, and environment-file exclusion
         shell: bash
         run: |
           set -euo pipefail
           container_name="wasteops-ci-${GITHUB_RUN_ID}"
+          disabled_name="${container_name}-gate-off"
+          missing_dsn_name="${container_name}-missing-dsn"
           auth_secret="$(openssl rand -hex 48)"
-          cleanup() { docker rm --force "$container_name" >/dev/null 2>&1 || true; }
+          runtime_password="$(openssl rand -hex 32)"
+          migration_password="$(openssl rand -hex 32)"
+          runtime_database_url="postgresql://wasteops_runtime:${runtime_password}@host.docker.internal:5432/wasteops?schema=public"
+          migration_database_url="postgresql://wasteops_migrator:${migration_password}@host.docker.internal:5432/wasteops?schema=public"
+          echo "::add-mask::$auth_secret"
+          echo "::add-mask::$runtime_password"
+          echo "::add-mask::$migration_password"
+          echo "::add-mask::$runtime_database_url"
+          echo "::add-mask::$migration_database_url"
+          same_role_name="${container_name}-same-role"
+          mismatched_target_name="${container_name}-mismatched-target"
+          nonempty_schema_name="${container_name}-nonempty-schema"
+          partial_history_name="${container_name}-partial-history"
+          cleanup() {
+            docker rm --force "$container_name" "$disabled_name" "$missing_dsn_name" \
+              "$same_role_name" "$mismatched_target_name" "$nonempty_schema_name" \
+              "$partial_history_name" >/dev/null 2>&1 || true
+          }
           trap cleanup EXIT
+
+          assert_gate_rejects() {
+            local name="$1"
+            local expected="$2"
+            local exit_code
+            local log_file="$RUNNER_TEMP/${name}.log"
+            shift 2
+            docker run --detach --name "$name" --env "AUTH_SECRET=$auth_secret" "$@" wasteops:ci >/dev/null
+            for _ in $(seq 1 15); do
+              if [[ "$(docker inspect --format '{{.State.Running}}' "$name")" == "false" ]]; then
+                break
+              fi
+              sleep 1
+            done
+            exit_code="$(docker inspect --format '{{.State.ExitCode}}' "$name")"
+            docker logs "$name" > "$log_file" 2>&1 || true
+            if [[ "$exit_code" == "0" ]] || ! grep -Fq "$expected" "$log_file"; then
+              echo "The migration gate did not reject the expected unsafe case: $name" >&2
+              return 1
+            fi
+          }
+
+          postgres_service="$(docker ps --quiet --filter 'ancestor=postgres:16' | head -n 1)"
+          if [[ -z "$postgres_service" ]]; then
+            echo 'The isolated PostgreSQL service container was not found.' >&2
+            exit 1
+          fi
+          docker exec "$postgres_service" psql -v ON_ERROR_STOP=1 -U wasteops -d wasteops \
+            -c "CREATE ROLE wasteops_runtime LOGIN PASSWORD '$runtime_password';" \
+            -c "CREATE ROLE wasteops_migrator LOGIN PASSWORD '$migration_password';" \
+            -c 'GRANT CONNECT ON DATABASE wasteops TO wasteops_runtime, wasteops_migrator;' \
+            -c 'GRANT USAGE ON SCHEMA public TO wasteops_runtime;' \
+            -c 'GRANT USAGE, CREATE ON SCHEMA public TO wasteops_migrator;'
+          docker exec "$postgres_service" psql -v ON_ERROR_STOP=1 -U wasteops -d wasteops \
+            -c 'CREATE SCHEMA wasteops_existing;' \
+            -c 'CREATE TABLE wasteops_existing.keep_table (id integer);' \
+            -c 'GRANT USAGE, CREATE ON SCHEMA wasteops_existing TO wasteops_migrator;'
+          docker exec "$postgres_service" psql -v ON_ERROR_STOP=1 -U wasteops -d wasteops \
+            -c 'CREATE SCHEMA wasteops_partial;' \
+            -c 'CREATE TABLE wasteops_partial."_prisma_migrations" ("id" VARCHAR(36) PRIMARY KEY, "checksum" VARCHAR(64) NOT NULL, "finished_at" TIMESTAMPTZ, "migration_name" VARCHAR(255) NOT NULL, "logs" TEXT, "rolled_back_at" TIMESTAMPTZ, "started_at" TIMESTAMPTZ NOT NULL DEFAULT NOW(), "applied_steps_count" INTEGER NOT NULL DEFAULT 0);' \
+            -c "INSERT INTO wasteops_partial.\"_prisma_migrations\" VALUES ('00000000-0000-4000-8000-000000000001', repeat('0', 64), NOW(), '20261028200524_init', NULL, NULL, NOW(), 1);" \
+            -c 'GRANT USAGE ON SCHEMA wasteops_partial TO wasteops_migrator;' \
+            -c 'GRANT SELECT ON TABLE wasteops_partial."_prisma_migrations" TO wasteops_migrator;'
+
+          assert_gate_rejects "$same_role_name" \
+            'Production runtime and migration PostgreSQL URLs must name distinct database roles' \
+            --env 'POSTGRES_DATABASE_URL=postgresql://same_role@unavailable.invalid:5432/wasteops?schema=public' \
+            --env 'POSTGRES_MIGRATION_DATABASE_URL=postgresql://same_role@unavailable.invalid:5432/wasteops?schema=public' \
+            --env 'WASTEOPS_RUN_INITIAL_MIGRATIONS=true'
+          assert_gate_rejects "$mismatched_target_name" \
+            'POSTGRES_DATABASE_URL and POSTGRES_MIGRATION_DATABASE_URL must target the same host, port, database, and schema' \
+            --env 'POSTGRES_DATABASE_URL=postgresql://runtime_role@unavailable.invalid:5432/wasteops?schema=public' \
+            --env 'POSTGRES_MIGRATION_DATABASE_URL=postgresql://migration_role@different.invalid:5432/wasteops?schema=public' \
+            --env 'WASTEOPS_RUN_INITIAL_MIGRATIONS=true'
+          assert_gate_rejects "$nonempty_schema_name" \
+            'The target schema contains objects without an approved migration history; no changes were made' \
+            --add-host=host.docker.internal:host-gateway \
+            --env "POSTGRES_DATABASE_URL=postgresql://wasteops_runtime:${runtime_password}@host.docker.internal:5432/wasteops?schema=wasteops_existing" \
+            --env "POSTGRES_MIGRATION_DATABASE_URL=postgresql://wasteops_migrator:${migration_password}@host.docker.internal:5432/wasteops?schema=wasteops_existing" \
+            --env 'WASTEOPS_RUN_INITIAL_MIGRATIONS=true'
+          assert_gate_rejects "$partial_history_name" \
+            'The database contains incomplete approved migration history; manual review is required' \
+            --add-host=host.docker.internal:host-gateway \
+            --env "POSTGRES_DATABASE_URL=postgresql://wasteops_runtime:${runtime_password}@host.docker.internal:5432/wasteops?schema=wasteops_partial" \
+            --env "POSTGRES_MIGRATION_DATABASE_URL=postgresql://wasteops_migrator:${migration_password}@host.docker.internal:5432/wasteops?schema=wasteops_partial" \
+            --env 'WASTEOPS_RUN_INITIAL_MIGRATIONS=true'
+
+          docker run --detach --name "$missing_dsn_name" \
+            --env "AUTH_SECRET=$auth_secret" \
+            --env "POSTGRES_DATABASE_URL=$runtime_database_url" \
+            --env 'WASTEOPS_RUN_INITIAL_MIGRATIONS=true' \
+            wasteops:ci >/dev/null
+          for _ in $(seq 1 15); do
+            if [[ "$(docker inspect --format '{{.State.Running}}' "$missing_dsn_name")" == "false" ]]; then
+              break
+            fi
+            sleep 1
+          done
+          missing_dsn_exit="$(docker inspect --format '{{.State.ExitCode}}' "$missing_dsn_name")"
+          docker logs "$missing_dsn_name" > "$RUNNER_TEMP/missing-dsn.log" 2>&1
+          if [[ "$missing_dsn_exit" == "0" ]] || ! grep -Fq 'POSTGRES_MIGRATION_DATABASE_URL is required' "$RUNNER_TEMP/missing-dsn.log"; then
+            echo 'The enabled migration gate did not fail closed when its migration-role URL was missing.' >&2
+            exit 1
+          fi
+
+          docker run --detach --name "$disabled_name" \
+            --publish 127.0.0.1:3001:3000 \
+            --env "AUTH_SECRET=$auth_secret" \
+            wasteops:ci >/dev/null
+          disabled_ready=0
+          for _ in $(seq 1 60); do
+            if curl --fail --silent --max-time 3 --output /dev/null http://127.0.0.1:3001/; then
+              disabled_ready=1
+              break
+            fi
+            sleep 1
+          done
+          docker logs "$disabled_name" > "$RUNNER_TEMP/disabled-gate.log" 2>&1
+          if [[ "$disabled_ready" != "1" ]] || ! grep -Fq 'Initial migration gate is off' "$RUNNER_TEMP/disabled-gate.log"; then
+            docker logs "$disabled_name" 2>&1 | sed "s/${auth_secret}/[REDACTED]/g" | tail -n 80 >&2
+            echo 'The default-off migration gate did not start the public app without a database URL.' >&2
+            exit 1
+          fi
+
           docker run --detach --name "$container_name" \
+            --add-host=host.docker.internal:host-gateway \
             --publish 127.0.0.1:3000:3000 \
             --env "AUTH_SECRET=$auth_secret" \
-            --env 'POSTGRES_DATABASE_URL=postgresql://build:build@127.0.0.1:5432/build?schema=public' \
+            --env "POSTGRES_DATABASE_URL=$runtime_database_url" \
+            --env "POSTGRES_MIGRATION_DATABASE_URL=$migration_database_url" \
+            --env 'WASTEOPS_RUN_INITIAL_MIGRATIONS=true' \
+            --env 'DATABASE_URL=mysql://unused:unused@managed.invalid:3306/unused' \
+            --env 'DRIZZLE_DATABASE_URL=mysql://unused:unused@managed.invalid:3306/unused' \
             wasteops:ci >/dev/null
           ready=0
           for _ in $(seq 1 60); do
-            if curl --fail --silent --max-time 3 --output /dev/null http://127.0.0.1:3000/; then
+            if curl --fail --silent --max-time 3 --output /dev/null http://127.0.0.1:3000/api/health; then
               ready=1
               break
             fi
             sleep 1
           done
           if [[ "$ready" != "1" ]]; then
-            docker logs "$container_name" 2>&1 | sed "s/${auth_secret}/[REDACTED]/g" | tail -n 80 >&2
+            docker logs "$container_name" 2>&1 | sed -e "s|${auth_secret}|[REDACTED_AUTH]|g" -e "s|${runtime_database_url}|[REDACTED_RUNTIME_URL]|g" -e "s|${migration_database_url}|[REDACTED_MIGRATION_URL]|g" | tail -n 80 >&2
             exit 1
           fi
+          curl --fail --silent --output /dev/null http://127.0.0.1:3000/
           curl --fail --silent http://127.0.0.1:3000/manus-routes.json > "$RUNNER_TEMP/manus-routes.json"
           node -e 'const fs=require("node:fs"); const data=JSON.parse(fs.readFileSync(process.argv[1],"utf8")); if (!Array.isArray(data.routes) || !data.routes.some(route => route.path === "/")) process.exit(1);' "$RUNNER_TEMP/manus-routes.json"
-          if ! docker exec "$container_name" sh -ec 'test -z "$(find /app -type f \( -name ".env" -o -name ".env.*" \) -print -quit)"' ; then
+          docker exec "$container_name" node /app/scripts/run-initial-migrations.mjs --verify
+          if docker exec "$container_name" sh -ec 'tr "\000" "\n" < /proc/1/environ | grep -Eq "^(POSTGRES_MIGRATION_DATABASE_URL|WASTEOPS_RUN_INITIAL_MIGRATIONS|DATABASE_URL|DRIZZLE_DATABASE_URL)="'; then
+            echo 'The application process inherited a migration-only or managed-MySQL environment variable.' >&2
+            exit 1
+          fi
+          docker exec -i "$postgres_service" psql -v ON_ERROR_STOP=1 -U wasteops -d wasteops <<'SQL'
+          DO $wasteops_grants$
+          DECLARE
+            app_table RECORD;
+          BEGIN
+            FOR app_table IN
+              SELECT tablename FROM pg_tables
+              WHERE schemaname = 'public' AND tablename <> '_prisma_migrations'
+            LOOP
+              EXECUTE format(
+                'GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE %I.%I TO wasteops_runtime',
+                'public', app_table.tablename
+              );
+            END LOOP;
+          END
+          $wasteops_grants$;
+          GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA public TO wasteops_runtime;
+          REVOKE ALL ON TABLE public."_prisma_migrations" FROM wasteops_runtime;
+          SQL
+          docker exec "$container_name" node --input-type=module -e '
+            import pg from "pg";
+            const client = new pg.Client({ connectionString: process.env.POSTGRES_DATABASE_URL });
+            await client.connect();
+            const result = await client.query(`SELECT COUNT(*)::int AS count FROM "Organization"`);
+            let migrationLedgerDenied = false;
+            try {
+              await client.query(`SELECT 1 FROM public."_prisma_migrations" LIMIT 1`);
+            } catch (error) {
+              if (error.code !== "42501") throw error;
+              migrationLedgerDenied = true;
+            }
+            await client.end();
+            if (result.rows[0].count !== 0) throw new Error("Unexpected organization seed data.");
+            if (!migrationLedgerDenied) throw new Error("Runtime role can access the Prisma migration ledger.");
+            console.log("Verified no seed data and no runtime access to the Prisma migration ledger.");
+          '
+          docker restart "$container_name" >/dev/null
+          ready=0
+          for _ in $(seq 1 60); do
+            if curl --fail --silent --max-time 3 --output /dev/null http://127.0.0.1:3000/api/health; then
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+          docker logs "$container_name" > "$RUNNER_TEMP/migration-gate.log" 2>&1
+          if [[ "$ready" != "1" ]] || ! grep -Fq 'Approved initial baseline is already recorded; skipping migrations.' "$RUNNER_TEMP/migration-gate.log"; then
+            docker logs "$container_name" 2>&1 | sed -e "s|${auth_secret}|[REDACTED_AUTH]|g" -e "s|${runtime_database_url}|[REDACTED_RUNTIME_URL]|g" -e "s|${migration_database_url}|[REDACTED_MIGRATION_URL]|g" | tail -n 80 >&2
+            echo 'The migration gate did not safely skip the already-applied baseline on restart.' >&2
+            exit 1
+          fi
+          if ! docker exec "$container_name" sh -ec 'test -z "$(find /app -path /app/node_modules -prune -o -type f \( -name ".env" -o -name ".env.*" \) -print -quit)' ; then
             echo 'Runtime container contains an environment file.' >&2
             exit 1
           fi
-          echo 'Container served the landing and route manifest; no .env files are present.'
+          echo 'Container served the public routes, applied only the approved schema migrations, skipped seeds, and kept the default gate off.'
 
   verify:
     name: Application checks
