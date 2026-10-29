@@ -282,7 +282,9 @@ jobs:
             echo 'The migration gate did not safely skip the already-applied baseline on restart.' >&2
             exit 1
           fi
-          if ! docker exec "$container_name" sh -ec 'test -z "$(find /app -path /app/node_modules -prune -o -type f \( -name ".env" -o -name ".env.*" \) -print -quit)' ; then
+          docker exec "$container_name" find /app -path /app/node_modules -prune -o -type f \( -name '.env' -o -name '.env.*' \) -print -quit \
+            > "$RUNNER_TEMP/runtime-environment-file-check"
+          if [[ -s "$RUNNER_TEMP/runtime-environment-file-check" ]]; then
             echo 'Runtime container contains an environment file.' >&2
             exit 1
           fi
