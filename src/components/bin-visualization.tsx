@@ -89,8 +89,8 @@ export function BinVisualization({ fillPct }: { fillPct: number }) {
           </div>
         )}
         <p className="field-help" style={{ marginBottom: 0 }}>
-          Text and 2D equivalents remain available to assistive technology. Reduced-motion preference disables
-          camera rotation.
+          The 3D bin makes one brief turn when enabled, then rests. Drag to inspect it; reduced-motion
+          preference skips the turn and disables rotation. The 2D gauge and text remain available.
         </p>
       </div>
     </section>

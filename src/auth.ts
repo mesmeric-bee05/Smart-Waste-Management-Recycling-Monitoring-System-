@@ -6,7 +6,7 @@ import { prisma } from "@/server/db";
 import { writeAudit } from "@/server/audit";
 import { allowRequest } from "@/server/rate-limit";
 
-const secureCookie = process.env.AUTH_COOKIE_SECURE === "true";
+const secureCookie = process.env.AUTH_COOKIE_SECURE !== "false";
 const sameSite = secureCookie && process.env.AUTH_COOKIE_SAME_SITE === "none" ? "none" : "lax";
 const validRoles = ["ADMIN", "SUPERVISOR", "COLLECTOR"] as const;
 

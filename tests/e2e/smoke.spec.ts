@@ -31,6 +31,15 @@ test("public landing routes staff and resident actions and labels its illustrati
     .analyze();
   expect(accessibility.violations.map(({ id, impact, help }) => ({ id, impact, help }))).toEqual([]);
 
+  for (const width of [768, 390]) {
+    await page.setViewportSize({ width, height: 900 });
+    await expect(page.getByRole("heading", { name: "Make every collection count." })).toBeVisible();
+    const hasHorizontalOverflow = await page.evaluate(
+      () => document.documentElement.scrollWidth > window.innerWidth,
+    );
+    expect(hasHorizontalOverflow).toBe(false);
+  }
+
   await page.getByRole("link", { name: "Submit a collection request" }).click();
   await expect(page).toHaveURL(/\/report$/);
 });
@@ -53,6 +62,15 @@ test("staff sign-in is invitation-only and the password visibility control works
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
     .analyze();
   expect(accessibility.violations.map(({ id, impact, help }) => ({ id, impact, help }))).toEqual([]);
+
+  for (const width of [768, 390]) {
+    await page.setViewportSize({ width, height: 900 });
+    await expect(page.getByRole("button", { name: "Sign in securely" })).toBeVisible();
+    const hasHorizontalOverflow = await page.evaluate(
+      () => document.documentElement.scrollWidth > window.innerWidth,
+    );
+    expect(hasHorizontalOverflow).toBe(false);
+  }
 });
 
 test("resident can submit a fictional public request and receives a safe reference", async ({ page }) => {
@@ -93,6 +111,45 @@ test("collector cannot enter administrator-only account management", async ({ pa
   await signIn(page, "INITIAL_COLLECTOR_EMAIL", "INITIAL_COLLECTOR_PASSWORD");
   await page.goto("/settings");
   await expect(page).toHaveURL(/\/dashboard\?notice=not-authorized$/);
+});
+
+test("administrator can enable optional telemetry 3D without motion under reduced-motion preference", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await signIn(page, "INITIAL_ADMIN_EMAIL", "INITIAL_ADMIN_PASSWORD");
+  await page.goto("/telemetry");
+  await expect(page.getByRole("heading", { name: "Simulated telemetry" })).toBeVisible();
+  await expect(
+    page.evaluate(() => window.matchMedia("(prefers-reduced-motion: reduce)").matches),
+  ).resolves.toBe(true);
+
+  const fallback = page.getByRole("img", { name: /Illustrative simulated bin fill: \d+ percent/ });
+  await expect(fallback).toBeVisible();
+  const enable = page.getByRole("button", { name: "Enable 3D" });
+  await enable.scrollIntoViewIfNeeded();
+  await expect(enable).toHaveAttribute("aria-pressed", "false");
+  await enable.click();
+
+  const canvas = page.locator("canvas");
+  await expect(page.getByRole("button", { name: "Disable 3D" })).toHaveAttribute("aria-pressed", "true");
+  await expect(canvas).toBeVisible();
+  const sceneIsDecorative = await canvas.evaluate((node) => node.closest('[aria-hidden="true"]') !== null);
+  expect(sceneIsDecorative).toBe(true);
+  await expect(
+    page.getByText(/reduced-motion preference skips the turn and disables rotation/),
+  ).toBeVisible();
+  await expect(page.getByText("SIMULATED ONLY", { exact: true })).toBeVisible();
+
+  const accessibility = await new AxeBuilder({ page })
+    .include('section[aria-labelledby="visualization-title"]')
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+    .analyze();
+  expect(accessibility.violations.map(({ id, impact, help }) => ({ id, impact, help }))).toEqual([]);
+
+  await page.getByRole("button", { name: "Disable 3D" }).click();
+  await expect(canvas).toHaveCount(0);
+  await expect(fallback).toBeVisible();
 });
 
 test("public request page meets WCAG A/AA checks", async ({ page }) => {
