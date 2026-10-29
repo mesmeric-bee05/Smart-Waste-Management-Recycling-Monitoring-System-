@@ -43,4 +43,4 @@ Do not run `npm run db:seed` in production. Set role/site admin lifecycle throug
 4. Check generic `/api/health`, authentication and tenant boundaries, map attribution, reports and audit outcomes using a designated non-production tenant.
 5. Promote only after acceptance and restore/recovery requirements pass; preserve previous image and compatible schema for rollback.
 
-The deployment declaration is stored and the protected Production values are present, but no publish has been requested or started. Database connectivity, reviewed migrations, initial administrator provisioning, approved production authentication and the readiness/security checks above remain release gates.
+The deployment declaration is stored and the protected Production values are present, but no publish has been started. Production release remains held until database connectivity, reviewed migrations, initial administrator provisioning, approved production authentication, and the readiness/security checks above are verified and live publication is authorized.
