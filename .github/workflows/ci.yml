@@ -83,7 +83,7 @@ jobs:
           fi
           curl --fail --silent http://127.0.0.1:3000/manus-routes.json > "$RUNNER_TEMP/manus-routes.json"
           node -e 'const fs=require("node:fs"); const data=JSON.parse(fs.readFileSync(process.argv[1],"utf8")); if (!Array.isArray(data.routes) || !data.routes.some(route => route.path === "/")) process.exit(1);' "$RUNNER_TEMP/manus-routes.json"
-          if ! docker exec "$container_name" sh -ec 'test -z "$(find /app -type f \( -name ".env" -o -name ".env.*" \) -print -quit)' ; then
+          if ! docker exec "$container_name" sh -ec 'test -z "$(find /app -type f \( -name ".env" -o -name ".env.*" \) -print -quit)"' ; then
             echo 'Runtime container contains an environment file.' >&2
             exit 1
           fi
