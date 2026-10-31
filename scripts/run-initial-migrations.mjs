@@ -39,15 +39,28 @@ function errorCode(error) {
 }
 
 function parseDatabaseTarget(connectionString, variableName) {
+  const directUrlHelp = `${variableName} must be a direct PostgreSQL URL using postgres:// or postgresql:// with a host and database; omit key= prefixes, shell commands, quotes, and whitespace`;
+  if (
+    typeof connectionString !== "string" ||
+    !connectionString ||
+    connectionString.trim() !== connectionString ||
+    /\s/.test(connectionString)
+  ) {
+    throw new MigrationGateError(directUrlHelp);
+  }
+
   let parsed;
   try {
     parsed = new URL(connectionString);
   } catch {
-    throw new MigrationGateError(`${variableName} is not a valid PostgreSQL URL`);
+    throw new MigrationGateError(directUrlHelp);
   }
 
   if (parsed.protocol !== "postgres:" && parsed.protocol !== "postgresql:") {
-    throw new MigrationGateError(`${variableName} must use the PostgreSQL protocol`);
+    throw new MigrationGateError(directUrlHelp);
+  }
+  if (!parsed.hostname) {
+    throw new MigrationGateError(`${variableName} must include a PostgreSQL host`);
   }
 
   let database;
