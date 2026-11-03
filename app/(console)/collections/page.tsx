@@ -1,4 +1,5 @@
 import { CalendarClock } from "lucide-react";
+import { formatUtcDate, formatUtcDateTime } from "@/domain/date-format";
 import { requirePageActor } from "@/server/authorization";
 import { getActiveCollectors, getCollectionPoints, getCollections } from "@/server/services/queries";
 import { CollectionControls, ScheduleForm } from "@/components/forms";
@@ -98,12 +99,12 @@ export default async function CollectionsPage() {
                       )}
                     </td>
                     <td>
-                      {collection.scheduledAt.toLocaleDateString()}
+                      {formatUtcDate(collection.scheduledAt)}
                       <br />
                       <span className="field-help">
                         {collection.completedAt
-                          ? `Completed ${collection.completedAt.toLocaleString()}`
-                          : `Created ${collection.createdAt.toLocaleDateString()}`}
+                          ? `Completed ${formatUtcDateTime(collection.completedAt)}`
+                          : `Created ${formatUtcDate(collection.createdAt)}`}
                       </span>
                     </td>
                     <td>

@@ -4,6 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import pg from "pg";
+import { baselineIsComplete, MigrationGateError, summarizeLedger } from "./migration-ledger.mjs";
 
 const { Client } = pg;
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -23,15 +24,6 @@ const approvedMigrations = [
     sha256: "a09ddca90325365f303adfaa7cfc5f665150a0c776459eb9164d8ee95336b0bf",
   },
 ];
-const approvedNames = new Set(approvedMigrations.map((migration) => migration.name));
-
-class MigrationGateError extends Error {
-  constructor(message, code) {
-    super(message);
-    this.name = "MigrationGateError";
-    this.safeCode = code;
-  }
-}
 
 function errorCode(error) {
   const code = error && typeof error === "object" && "code" in error ? error.code : undefined;
@@ -140,7 +132,7 @@ async function readMigrationLedger(connectionString) {
     connected = true;
     try {
       const result = await client.query(
-        `SELECT migration_name, finished_at, rolled_back_at FROM ${migrationTable(schema)} ORDER BY migration_name`,
+        `SELECT migration_name, checksum, finished_at, rolled_back_at FROM ${migrationTable(schema)} ORDER BY migration_name`,
       );
       return result.rows;
     } catch (error) {
@@ -189,42 +181,6 @@ async function assertEmptyTargetSchema(connectionString) {
   } finally {
     if (connected) await client.end().catch(() => undefined);
   }
-}
-
-function summarizeLedger(rows) {
-  if (rows.length === 0) return new Set();
-
-  if (rows.length !== approvedMigrations.length) {
-    throw new MigrationGateError(
-      "The database contains incomplete approved migration history; manual review is required",
-    );
-  }
-
-  const applied = new Set();
-  for (const row of rows) {
-    if (!approvedNames.has(row.migration_name)) {
-      throw new MigrationGateError(
-        "The database contains an unapproved migration history; no changes were made",
-      );
-    }
-    if (row.finished_at === null || row.rolled_back_at !== null) {
-      throw new MigrationGateError(
-        "The database contains an incomplete or rolled-back migration record; manual review is required",
-      );
-    }
-    if (applied.has(row.migration_name)) {
-      throw new MigrationGateError(
-        "The database contains a duplicate approved migration record; manual review is required",
-      );
-    }
-    applied.add(row.migration_name);
-  }
-
-  return applied;
-}
-
-function baselineIsComplete(applied) {
-  return approvedMigrations.every((migration) => applied.has(migration.name));
 }
 
 async function verifyApprovedMigrationBundle() {
@@ -310,8 +266,8 @@ function runPrismaDeploy(migrationConnectionString) {
 }
 
 async function verifyLedger(connectionString) {
-  const applied = summarizeLedger(await readMigrationLedger(connectionString));
-  if (!baselineIsComplete(applied)) {
+  const applied = summarizeLedger(await readMigrationLedger(connectionString), approvedMigrations);
+  if (!baselineIsComplete(applied, approvedMigrations)) {
     throw new MigrationGateError("The approved migration baseline is incomplete");
   }
   console.log("[wasteops-db] Verified the three approved initial migrations.");
@@ -342,8 +298,8 @@ async function runStartupGate() {
 
   assertSameDatabaseTarget(runtimeConnectionString, migrationConnectionString);
   await verifyApprovedMigrationBundle();
-  const applied = summarizeLedger(await readMigrationLedger(migrationConnectionString));
-  if (baselineIsComplete(applied)) {
+  const applied = summarizeLedger(await readMigrationLedger(migrationConnectionString), approvedMigrations);
+  if (baselineIsComplete(applied, approvedMigrations)) {
     console.log("[wasteops-db] Approved initial baseline is already recorded; skipping migrations.");
     return;
   }

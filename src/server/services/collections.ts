@@ -4,6 +4,7 @@ import { collectionCompletionSchema, scheduleSchema, statusSchema } from "@/doma
 import { prisma } from "@/server/db";
 import { requireActor } from "@/server/authorization";
 import { writeAudit } from "@/server/audit";
+import { updateCollectionPointLastEmptiedAt } from "@/server/tenant-integrity";
 
 export async function scheduleCollection(raw: unknown) {
   const actor = await requireActor(["ADMIN", "SUPERVISOR"]);
@@ -118,7 +119,7 @@ export async function completeCollection(raw: unknown) {
         materials: { deleteMany: {}, create: materials },
       },
     });
-    await tx.collectionPoint.update({ where: { id: current.pointId }, data: { lastEmptiedAt: new Date() } });
+    await updateCollectionPointLastEmptiedAt(tx, current.pointId, actor.organizationId, new Date());
     await writeAudit(tx, {
       organizationId: actor.organizationId,
       actorId: actor.id,

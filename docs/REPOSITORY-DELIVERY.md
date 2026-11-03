@@ -22,3 +22,9 @@ The user explicitly requested that the complete project be pushed to this exact 
 - **Scope:** no Production database connection, migration, seed, or Admin creation occurred. The authorized deployment attempt failed before DB connection; no successful live deployment or hardware/IoT integration is claimed. The software-only MVP and explicit simulated-data boundary remain unchanged.
 
 This receipt records the verified GitHub code/workflow history and current release blocker; it does not indicate a successful Production deployment or a new Manus checkpoint.
+
+## Status update — 2026-11-03
+
+This update supersedes the preceding snapshot's statement that GitHub access was unavailable and Production publication remained held. The enabled GitHub connector can read the user-selected public repository. Its `main` head is `80c676700e4af56718a9b4730d7d2c07a7f4e203`, which contains the project source through `36dd5e1`; a 31-file audit patch applies cleanly without changing the destination history or `LICENSE`. The patch has not yet been committed or pushed at the time of this note.
+
+The user replaced both protected Production PostgreSQL URL values and explicitly authorized one current Production publication with exactly the three additive migrations despite the documented open gates. Values remain secret and have not been independently parsed or tested against PostgreSQL. The current connection, migration, seed, initial administrator, health, and publication outcomes are not yet verified. Local formatting, lint, strict typecheck, 24 unit tests, 8 E2E scenarios, optimized build, full/production dependency audits, and loopback-only Development ledger verification passed. These are not Production evidence.

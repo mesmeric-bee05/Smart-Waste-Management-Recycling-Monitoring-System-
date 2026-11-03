@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Activity, ClipboardCheck, MapPin, Recycle, Truck, Weight } from "lucide-react";
+import { formatUtcDateTime, formatUtcTime } from "@/domain/date-format";
 import { getDashboardData, wasteCategories, type DashboardFilters } from "@/server/services/queries";
 import { PageHeading } from "@/components/page-heading";
 import { OverviewCharts } from "@/components/overview-charts";
@@ -135,13 +136,13 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       <div className="kpi-grid" style={{ marginTop: 12 }}>
         <Kpi
           label="Recorded materials"
-          value={`${kpis.totalKg.toLocaleString()} kg`}
+          value={`${kpis.totalKg.toLocaleString("en-US")} kg`}
           hint="From completed collections"
           icon={Weight}
         />
         <Kpi
           label="Recorded recyclable material"
-          value={`${kpis.recycledKg.toLocaleString()} kg`}
+          value={`${kpis.recycledKg.toLocaleString("en-US")} kg`}
           hint={
             kpis.diversionRate === null
               ? "No denominator available"
@@ -191,7 +192,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                       <strong>{reading.point.code}</strong> · {reading.point.name}
                     </div>
                     <div className="activity-time">
-                      {reading.point.zone} · sample at {reading.recordedAt.toLocaleString()}
+                      {reading.point.zone} · sample at {formatUtcDateTime(reading.recordedAt)}
                     </div>
                     <div className="fill-meter" style={{ marginTop: 7 }}>
                       <span className="mono" style={{ width: 34 }}>
@@ -237,7 +238,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                         <strong>{event.actor?.fullName ?? "Public intake"}</strong> · {event.action}
                       </div>
                       <div className="activity-time">
-                        {event.createdAt.toLocaleString()} · {event.entityType}
+                        {formatUtcDateTime(event.createdAt)} · {event.entityType}
                       </div>
                     </div>
                   </div>
@@ -279,7 +280,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                 ))}
               </div>
               <p className="field-help" style={{ marginTop: 14 }}>
-                Dashboard refreshed at {new Date(data.asOf).toLocaleTimeString()}.
+                Dashboard refreshed at {formatUtcTime(data.asOf)}.
               </p>
             </div>
           </section>

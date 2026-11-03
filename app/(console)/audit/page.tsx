@@ -1,4 +1,5 @@
 import { ShieldCheck } from "lucide-react";
+import { formatUtcDateTime } from "@/domain/date-format";
 import { getAuditEvents } from "@/server/services/queries";
 import { PageHeading } from "@/components/page-heading";
 
@@ -39,7 +40,7 @@ export default async function AuditPage() {
             <tbody>
               {events.map((event) => (
                 <tr key={event.id}>
-                  <td className="mono">{event.createdAt.toLocaleString()}</td>
+                  <td className="mono">{formatUtcDateTime(event.createdAt)}</td>
                   <td>{event.actor?.fullName ?? <span className="muted">Public / system</span>}</td>
                   <td>
                     <span className="badge badge-neutral">{event.action}</span>

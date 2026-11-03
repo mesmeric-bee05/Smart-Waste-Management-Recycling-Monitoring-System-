@@ -2,7 +2,7 @@ import React from "react";
 import { NextResponse } from "next/server";
 import { CollectionStatus, WasteCategory } from "@/generated/prisma/client";
 import { Document, Page, StyleSheet, Text, View, renderToBuffer } from "@react-pdf/renderer";
-import { csvCell } from "@/domain/metrics";
+import { csvCell, sourceProvenanceLabel } from "@/domain/metrics";
 import { wasteCategories } from "@/server/services/queries";
 import { requireActor, AuthorizationError } from "@/server/authorization";
 import { prisma } from "@/server/db";
@@ -27,6 +27,7 @@ type Detail = {
   zone: string;
   category: string;
   weightKg: number;
+  source: string;
   simulated: boolean;
   estimate: number;
 };
@@ -120,7 +121,11 @@ function buildPdf(
             React.createElement(Text, { style: { width: "18%" } }, row.zone),
             React.createElement(Text, { style: { width: "16%" } }, row.category),
             React.createElement(Text, { style: { width: "12%" } }, row.weightKg.toFixed(2)),
-            React.createElement(Text, { style: { width: "16%" } }, row.simulated ? "SIMULATED" : "RECORDED"),
+            React.createElement(
+              Text,
+              { style: { width: "16%" } },
+              sourceProvenanceLabel(row.source, row.simulated),
+            ),
             React.createElement(Text, { style: { width: "16%" } }, row.estimate.toFixed(2)),
           ),
         ),
@@ -215,6 +220,7 @@ export async function GET(request: Request) {
         zone: collection.point.zone,
         category: material.category,
         weightKg: material.weightKg,
+        source: collection.source,
         simulated: collection.isSimulated || collection.source === "SIMULATED",
         estimate: ["PLASTIC", "PAPER", "GLASS", "METAL"].includes(material.category)
           ? material.weightKg * 2.5
@@ -263,7 +269,7 @@ export async function GET(request: Request) {
         row.zone,
         row.category,
         row.weightKg.toFixed(2),
-        row.simulated ? "SIMULATED" : "RECORDED",
+        sourceProvenanceLabel(row.source, row.simulated),
         row.estimate.toFixed(2),
         "",
         "",

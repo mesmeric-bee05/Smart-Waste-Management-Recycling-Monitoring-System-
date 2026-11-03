@@ -1,4 +1,5 @@
 import { Users, UserCog } from "lucide-react";
+import { formatUtcDateTime } from "@/domain/date-format";
 import { getUsers } from "@/server/services/queries";
 import { InviteUserForm } from "@/components/forms";
 import { PageHeading } from "@/components/page-heading";
@@ -61,7 +62,13 @@ export default async function SettingsPage() {
                       <span className="badge badge-red">Suspended</span>
                     )}
                   </td>
-                  <td>{user.lastLoginAt?.toLocaleString() ?? <span className="muted">Never</span>}</td>
+                  <td>
+                    {user.lastLoginAt ? (
+                      formatUtcDateTime(user.lastLoginAt)
+                    ) : (
+                      <span className="muted">Never</span>
+                    )}
+                  </td>
                 </tr>
               ))}
               {users.length === 0 && (

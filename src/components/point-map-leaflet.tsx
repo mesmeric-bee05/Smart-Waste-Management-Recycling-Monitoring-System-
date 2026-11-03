@@ -4,6 +4,7 @@ import "leaflet/dist/leaflet.css";
 import { useEffect, useMemo } from "react";
 import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
 import L from "leaflet";
+import { formatUtcDateTime } from "@/domain/date-format";
 
 const pointIcon = (tone: string) =>
   L.divIcon({
@@ -106,7 +107,7 @@ export default function PointMapLeaflet({
                 {point.isSimulated ? " · SIMULATED" : ""}
                 <br />
                 {point.qualityStatus === "STALE" ? "STALE SAMPLE" : (point.qualityStatus ?? "No sample")}
-                {point.recordedAt ? ` · ${point.recordedAt.toLocaleString()}` : ""}
+                {point.recordedAt ? ` · ${formatUtcDateTime(point.recordedAt)}` : ""}
               </Popup>
             </Marker>
           );
@@ -126,7 +127,7 @@ export default function PointMapLeaflet({
               <br />
               {vehicle.qualityStatus === "STALE" ? "STALE SAMPLE" : vehicle.source}
               <br />
-              {vehicle.recordedAt.toLocaleString()}
+              {formatUtcDateTime(vehicle.recordedAt)}
             </Popup>
           </Marker>
         ))}

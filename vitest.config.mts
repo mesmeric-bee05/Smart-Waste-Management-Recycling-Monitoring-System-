@@ -8,7 +8,7 @@ export default defineConfig({
   resolve: { alias: { "@": resolve(root, "src") } },
   test: {
     environment: "node",
-    include: ["src/**/*.test.{ts,tsx}", "app/**/*.test.{ts,tsx}"],
+    include: ["src/**/*.test.{ts,tsx,mjs}", "app/**/*.test.{ts,tsx}"],
     coverage: { include: ["src/domain/**/*.ts", "src/server/services/**/*.ts"] },
   },
 });

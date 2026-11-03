@@ -29,7 +29,7 @@ export default async function RecyclingPage() {
               <Weight size={16} />
             </span>
           </div>
-          <div className="kpi-value">{data.kpis.totalKg.toLocaleString()} kg</div>
+          <div className="kpi-value">{data.kpis.totalKg.toLocaleString("en-US")} kg</div>
           <div className="kpi-foot">Completed records · 30-day window</div>
         </section>
         <section className="panel kpi-card">
@@ -39,7 +39,7 @@ export default async function RecyclingPage() {
               <Recycle size={16} />
             </span>
           </div>
-          <div className="kpi-value">{data.kpis.recycledKg.toLocaleString()} kg</div>
+          <div className="kpi-value">{data.kpis.recycledKg.toLocaleString("en-US")} kg</div>
           <div className="kpi-foot">Plastic, paper, glass and metal</div>
         </section>
         <section className="panel kpi-card">
@@ -57,7 +57,7 @@ export default async function RecyclingPage() {
             <span>Estimated CO₂e avoided</span>
             <span className="badge badge-amber">Provisional</span>
           </div>
-          <div className="kpi-value">{(data.kpis.recycledKg * 2.5).toLocaleString()} kg</div>
+          <div className="kpi-value">{(data.kpis.recycledKg * 2.5).toLocaleString("en-US")} kg</div>
           <div className="kpi-foot">Recyclable kg × 2.5 factor · not measured</div>
         </section>
       </div>

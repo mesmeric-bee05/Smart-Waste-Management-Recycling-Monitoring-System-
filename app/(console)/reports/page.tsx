@@ -118,7 +118,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
                 <span className="activity-mark" />
                 <div>
                   <div className="activity-text">
-                    <strong>{data.kpis.totalKg.toLocaleString()} kg</strong> recorded total material
+                    <strong>{data.kpis.totalKg.toLocaleString("en-US")} kg</strong> recorded total material
                   </div>
                   <div className="activity-time">Category: {category || "all categories"}</div>
                 </div>
@@ -127,7 +127,8 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
                 <span className="activity-mark" />
                 <div>
                   <div className="activity-text">
-                    <strong>{data.kpis.recycledKg.toLocaleString()} kg</strong> recorded recyclable material
+                    <strong>{data.kpis.recycledKg.toLocaleString("en-US")} kg</strong> recorded recyclable
+                    material
                   </div>
                   <div className="activity-time">Zone: {zone || "all zones"}</div>
                 </div>

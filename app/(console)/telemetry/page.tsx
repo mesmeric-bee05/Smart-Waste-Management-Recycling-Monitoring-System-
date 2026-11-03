@@ -1,4 +1,5 @@
 import { Activity, Cpu, Radio, Truck } from "lucide-react";
+import { formatUtcDateTime } from "@/domain/date-format";
 import { requirePageActor } from "@/server/authorization";
 import { getTelemetry } from "@/server/services/queries";
 import { SimulationControl } from "@/components/forms";
@@ -126,7 +127,7 @@ export default async function TelemetryPage() {
                         "—"
                       )}
                     </td>
-                    <td>{reading?.recordedAt.toLocaleString() ?? "—"}</td>
+                    <td>{reading ? formatUtcDateTime(reading.recordedAt) : "—"}</td>
                     <td>
                       {reading?.isSimulated ? <span className="badge badge-simulated">SIMULATED</span> : "—"}
                     </td>
@@ -189,7 +190,7 @@ export default async function TelemetryPage() {
                         "No sample"
                       )}
                     </td>
-                    <td>{ping?.recordedAt.toLocaleString() ?? "—"}</td>
+                    <td>{ping ? formatUtcDateTime(ping.recordedAt) : "—"}</td>
                   </tr>
                 );
               })}

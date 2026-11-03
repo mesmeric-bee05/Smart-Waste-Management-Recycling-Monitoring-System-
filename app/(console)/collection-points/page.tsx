@@ -1,4 +1,5 @@
 import { MapPin, Search } from "lucide-react";
+import { formatUtcDateTime } from "@/domain/date-format";
 import { requirePageActor } from "@/server/authorization";
 import { getCollectionPoints } from "@/server/services/queries";
 import { DeactivatePointForm, EditPointForm, PointForm } from "@/components/forms";
@@ -112,7 +113,7 @@ export default async function CollectionPointsPage() {
                           >
                             {reading.qualityStatus === "STALE" ? "STALE SAMPLE" : "SIM"}
                           </span>
-                          <span className="field-help">{reading.recordedAt.toLocaleString()}</span>
+                          <span className="field-help">{formatUtcDateTime(reading.recordedAt)}</span>
                         </div>
                       ) : (
                         <span className="muted">No reading</span>

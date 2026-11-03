@@ -73,6 +73,34 @@ test("staff sign-in is invitation-only and the password visibility control works
   }
 });
 
+test("server-rendered pages hydrate without locale/time-zone console errors", async ({ browser }) => {
+  const context = await browser.newContext({ locale: "fr-FR", timezoneId: "Pacific/Honolulu" });
+  const page = await context.newPage();
+  const hydrationErrors: string[] = [];
+  page.on("console", (message) => {
+    if (
+      message.type() === "error" &&
+      /hydration|hydrated|server rendered html|text content does not match/i.test(message.text())
+    )
+      hydrationErrors.push(message.text());
+  });
+
+  try {
+    for (const route of ["/", "/login", "/report"]) {
+      const response = await page.goto(route);
+      expect(response?.status()).toBe(200);
+    }
+    await signIn(page, "INITIAL_ADMIN_EMAIL", "INITIAL_ADMIN_PASSWORD");
+    await expect(
+      page.getByRole("heading", { name: "Collection activity, without the guesswork." }),
+    ).toBeVisible();
+    await page.reload();
+    expect(hydrationErrors).toEqual([]);
+  } finally {
+    await context.close();
+  }
+});
+
 test("resident can submit a fictional public request and receives a safe reference", async ({ page }) => {
   await page.goto("/report");
   await page
@@ -104,7 +132,9 @@ test("administrator can sign in, see simulation provenance, export CSV, and use 
   expect(response.status()).toBe(200);
   expect(response.headers()["content-type"]).toContain("text/csv");
   expect(response.headers()["cache-control"]).toBe("private, no-store");
-  expect(await response.text()).toContain("REPORT_METADATA");
+  const csv = await response.text();
+  expect(csv).toContain("REPORT_METADATA");
+  expect(csv).toContain("SIMULATED");
 });
 
 test("collector cannot enter administrator-only account management", async ({ page }) => {

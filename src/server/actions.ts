@@ -13,6 +13,7 @@ import { updateRequest } from "@/server/services/requests";
 import { advanceSimulation } from "@/server/services/simulation";
 import { inviteUser } from "@/server/services/users";
 import { parseScheduleDateAtNoonUtc } from "@/domain/dates";
+import { formatUtcTime } from "@/domain/date-format";
 
 export type ActionState = { ok: boolean; message: string };
 const initialActionState: ActionState = { ok: false, message: "" };
@@ -203,7 +204,7 @@ export async function advanceSimulationAction(
     revalidatePath("/dashboard");
     return {
       ok: true,
-      message: `SIMULATED sample updated at ${new Date(result.recordedAt).toLocaleTimeString()}.`,
+      message: `SIMULATED sample updated at ${formatUtcTime(result.recordedAt)}.`,
     };
   } catch (error) {
     return { ok: false, message: errorText(error) };

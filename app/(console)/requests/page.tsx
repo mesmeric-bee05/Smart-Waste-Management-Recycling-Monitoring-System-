@@ -1,4 +1,5 @@
 import { Inbox } from "lucide-react";
+import { formatUtcDateTime } from "@/domain/date-format";
 import { getRequests } from "@/server/services/queries";
 import { RequestControls } from "@/components/forms";
 import { PageHeading } from "@/components/page-heading";
@@ -64,7 +65,7 @@ export default async function RequestsPage() {
                       {request.status}
                     </span>
                   </td>
-                  <td>{request.createdAt.toLocaleString()}</td>
+                  <td>{formatUtcDateTime(request.createdAt)}</td>
                   <td>
                     {request.point ? (
                       <>

@@ -14,6 +14,13 @@ export function diversionRatePct(divertedKg: number, totalKg: number): number | 
   return Math.min(100, Math.max(0, Number(((divertedKg / totalKg) * 100).toFixed(1))));
 }
 
+export function sourceProvenanceLabel(source: string, isSimulated: boolean): string {
+  const allowedSources = new Set(["SIMULATED", "MANUAL", "IMPORTED", "DEVICE"]);
+  const normalizedSource = source.toUpperCase();
+  const safeSource = allowedSources.has(normalizedSource) ? normalizedSource : "UNKNOWN";
+  return isSimulated && safeSource !== "SIMULATED" ? `${safeSource} · SIMULATED` : safeSource;
+}
+
 export function csvCell(value: unknown): string {
   const text = String(value ?? "");
   const safe = /^[\s\u0000-\u001f]*[=+\-@]/.test(text) ? `'${text}` : text;
