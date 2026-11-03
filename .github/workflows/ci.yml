@@ -74,6 +74,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          if ! docker run --rm --entrypoint sh wasteops:ci -c 'test -r /app/scripts/migration-ledger.mjs'; then
+            echo 'Runtime image is missing the migration-ledger module.' >&2
+            exit 1
+          fi
           container_name="wasteops-ci-${GITHUB_RUN_ID}"
           disabled_name="${container_name}-gate-off"
           missing_dsn_name="${container_name}-missing-dsn"
@@ -104,7 +108,7 @@ jobs:
             local exit_code
             local log_file="$RUNNER_TEMP/${name}.log"
             shift 2
-            docker run --detach --name "$name" --env "AUTH_SECRET=$auth_secret" "$@" wasteops:ci >/dev/null
+            docker run --detach --name "$name" --env "AUTH_SECRET=$auth_secret" --env 'NODE_ENV=production' "$@" wasteops:ci >/dev/null
             for _ in $(seq 1 15); do
               if [[ "$(docker inspect --format '{{.State.Running}}' "$name")" == "false" ]]; then
                 break
@@ -115,6 +119,7 @@ jobs:
             docker logs "$name" > "$log_file" 2>&1 || true
             if [[ "$exit_code" == "0" ]] || ! grep -Fq "$expected" "$log_file"; then
               echo "The migration gate did not reject the expected unsafe case: $name" >&2
+              sed -E 's#(postgres(ql)?://)[^@[:space:]]+@#\1<redacted>@#g; s/(password=)[^&[:space:]]+/\1<redacted>/Ig' "$log_file" | tail -n 12 >&2
               return 1
             fi
           }

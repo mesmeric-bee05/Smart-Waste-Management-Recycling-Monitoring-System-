@@ -41,6 +41,7 @@ COPY --from=builder --chown=node:node /app/prisma/schema.prisma ./prisma/schema.
 COPY --from=builder --chown=node:node /app/prisma/migrations ./prisma/migrations
 COPY --from=builder --chown=node:node /app/prisma.config.ts ./prisma.config.ts
 COPY --from=builder --chown=node:node /app/scripts/run-initial-migrations.mjs ./scripts/run-initial-migrations.mjs
+COPY --from=builder --chown=node:node /app/scripts/migration-ledger.mjs ./scripts/migration-ledger.mjs
 COPY --from=builder --chown=node:node /app/scripts/start-container.sh ./scripts/start-container.sh
 RUN chmod 0555 /app/scripts/start-container.sh
 USER node
