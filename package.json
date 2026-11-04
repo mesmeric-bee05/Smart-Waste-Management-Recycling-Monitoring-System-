@@ -35,7 +35,7 @@
     "dotenv": "18.0.9",
     "framer-motion": "14.7.1",
     "leaflet": "1.9.4",
-    "lucide-react": "1.63.0",
+    "lucide-react": "1.66.0",
     "next": "16.4.3",
     "next-auth": "5.0.0-beta.32",
     "papaparse": "5.7.0",
