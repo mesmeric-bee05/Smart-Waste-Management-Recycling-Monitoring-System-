@@ -135,6 +135,25 @@ test("administrator can sign in, see simulation provenance, export CSV, and use 
   const csv = await response.text();
   expect(csv).toContain("REPORT_METADATA");
   expect(csv).toContain("SIMULATED");
+
+  await page.setViewportSize({ width: 390, height: 900 });
+  await page.getByRole("button", { name: "Open navigation" }).click();
+  await page.getByRole("link", { name: "Reports", exact: true }).click();
+  await expect(page).toHaveURL(/\/reports$/);
+  await expect(page.locator(".main-area h1")).toBeFocused();
+  await expect(page.getByRole("button", { name: "Open navigation" })).toHaveAttribute(
+    "aria-expanded",
+    "false",
+  );
+
+  await page.getByRole("button", { name: "Open navigation" }).click();
+  await page.goBack();
+  await expect(page).toHaveURL(/\/dashboard(?:\?.*)?$/);
+  await expect(page.locator(".main-area h1")).toBeFocused();
+  await expect(page.getByRole("button", { name: "Open navigation" })).toHaveAttribute(
+    "aria-expanded",
+    "false",
+  );
 });
 
 test("collector cannot enter administrator-only account management", async ({ page }) => {

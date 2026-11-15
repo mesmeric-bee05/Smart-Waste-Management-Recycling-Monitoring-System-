@@ -345,6 +345,26 @@ jobs:
       - run: npm run db:generate
       - run: npm run db:deploy
       - run: npm run db:seed
+      - name: Test first-admin concurrency in an isolated PostgreSQL schema
+        shell: bash
+        run: |
+          set -euo pipefail
+          schema='wasteops_bootstrap_ci'
+          database_url="postgresql://wasteops@127.0.0.1:5432/wasteops?schema=${schema}"
+          postgres_service="$(docker ps --quiet --filter 'ancestor=postgres:16' | head -n 1)"
+          if [[ -z "$postgres_service" ]]; then
+            echo 'The isolated PostgreSQL service container was not found.' >&2
+            exit 1
+          fi
+          docker exec "$postgres_service" psql -v ON_ERROR_STOP=1 -U wasteops -d wasteops \
+            -c "CREATE SCHEMA ${schema}"
+          cleanup() {
+            docker exec "$postgres_service" psql -v ON_ERROR_STOP=1 -U wasteops -d wasteops \
+              -c "DROP SCHEMA IF EXISTS ${schema} CASCADE" >/dev/null
+          }
+          trap cleanup EXIT
+          POSTGRES_DATABASE_URL="$database_url" npm run db:deploy
+          POSTGRES_DATABASE_URL="$database_url" npm run test:bootstrap-concurrency
       - run: npm run format:check
       - run: npm run lint
       - run: npm run typecheck

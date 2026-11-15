@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Activity,
   ClipboardList,
@@ -47,21 +47,90 @@ const links = [
 
 export function Navigation({ role }: { role: Role }) {
   const pathname = usePathname();
-  const [open, setOpen] = useState(false);
+  const [openPath, setOpenPath] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const sidebarRef = useRef<HTMLElement>(null);
+  const previousPathname = useRef(pathname);
+  const open = openPath === pathname;
   const visible = links.filter((link) => (link.roles as readonly Role[]).includes(role));
+  const closeMenu = () => {
+    setOpenPath(null);
+    buttonRef.current?.focus();
+  };
+
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 760px)");
+    const updateViewport = () => {
+      setIsMobile(media.matches);
+      if (!media.matches) setOpenPath(null);
+    };
+    updateViewport();
+    media.addEventListener("change", updateViewport);
+    return () => media.removeEventListener("change", updateViewport);
+  }, []);
+
+  useEffect(() => {
+    if (!isMobile || !open) return;
+    const frame = window.requestAnimationFrame(() =>
+      sidebarRef.current?.querySelector<HTMLAnchorElement>(".nav-link")?.focus(),
+    );
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setOpenPath(null);
+      buttonRef.current?.focus();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isMobile, open]);
+
+  useEffect(() => {
+    const previous = previousPathname.current;
+    if (previous === pathname) return;
+    previousPathname.current = pathname;
+    if (!isMobile || openPath !== previous) return;
+    const frame = window.requestAnimationFrame(() => {
+      setOpenPath((current) => (current === previous ? null : current));
+      const heading = document.querySelector<HTMLElement>(".main-area h1");
+      if (!heading) return;
+      heading.tabIndex = -1;
+      heading.focus({ preventScroll: true });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [isMobile, openPath, pathname]);
+
   return (
     <>
       <button
+        ref={buttonRef}
         className="mobile-menu-button"
         type="button"
         aria-label={open ? "Close navigation" : "Open navigation"}
-        aria-expanded={open}
-        onClick={() => setOpen((value) => !value)}
+        aria-expanded={isMobile && open}
+        aria-controls="wasteops-primary-navigation"
+        onClick={() => (open ? closeMenu() : setOpenPath(pathname))}
       >
-        {open ? <X size={18} /> : <Menu size={18} />}
+        {open ? <X size={18} aria-hidden="true" /> : <Menu size={18} aria-hidden="true" />}
       </button>
-      <aside className="sidebar" data-open={open} aria-label="Primary navigation">
-        <Link className="brand" href="/dashboard" onClick={() => setOpen(false)}>
+      <aside
+        id="wasteops-primary-navigation"
+        ref={sidebarRef}
+        className="sidebar"
+        data-open={isMobile && open}
+        inert={isMobile && !open}
+        aria-hidden={isMobile && !open ? true : undefined}
+        aria-label="Primary navigation"
+      >
+        <Link
+          className="brand"
+          href="/dashboard"
+          onClick={() => {
+            if (pathname === "/dashboard") closeMenu();
+          }}
+        >
           <span className="brand-mark" aria-hidden="true">
             <Recycle size={22} strokeWidth={2.2} />
           </span>
@@ -81,7 +150,9 @@ export function Navigation({ role }: { role: Role }) {
                 href={href}
                 key={href}
                 aria-current={active ? "page" : undefined}
-                onClick={() => setOpen(false)}
+                onClick={() => {
+                  if (pathname === href) closeMenu();
+                }}
               >
                 <Icon className="nav-icon" aria-hidden="true" />
                 <span>{label}</span>

@@ -5,9 +5,9 @@ import { loginSchema } from "@/domain/schemas";
 import { prisma } from "@/server/db";
 import { writeAudit } from "@/server/audit";
 import { allowRequest } from "@/server/rate-limit";
+import { buildAuthCookieOverrides, resolveAuthCookiePolicy } from "@/server/auth-cookie-policy";
 
-const secureCookie = process.env.AUTH_COOKIE_SECURE !== "false";
-const sameSite = secureCookie && process.env.AUTH_COOKIE_SAME_SITE === "none" ? "none" : "lax";
+const authCookiePolicy = resolveAuthCookiePolicy(process.env);
 const validRoles = ["ADMIN", "SUPERVISOR", "COLLECTOR"] as const;
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -15,12 +15,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   secret: process.env.AUTH_SECRET,
   session: { strategy: "jwt", maxAge: 20 * 60, updateAge: 5 * 60 },
   pages: { signIn: "/login" },
-  cookies: {
-    sessionToken: {
-      name: secureCookie ? "__Secure-authjs.session-token" : "authjs.session-token",
-      options: { httpOnly: true, sameSite, path: "/", secure: secureCookie },
-    },
-  },
+  cookies: buildAuthCookieOverrides(authCookiePolicy),
   providers: [
     Credentials({
       credentials: { email: {}, password: { type: "password" } },

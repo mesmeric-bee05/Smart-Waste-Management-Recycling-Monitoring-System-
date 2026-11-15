@@ -39,7 +39,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       <PageHeading
         eyebrow="Operational overview"
         title="Collection activity, without the guesswork."
-        description="A current view of recorded collection work, recycling weights and requests across your organization."
+        description="A current view of recorded collection work, potentially recyclable category weights and requests across your organization."
         actions={
           <Link className="button button-primary" href="/collections">
             <ClipboardCheck size={15} />
@@ -141,12 +141,12 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           icon={Weight}
         />
         <Kpi
-          label="Recorded recyclable material"
-          value={`${kpis.recycledKg.toLocaleString("en-US")} kg`}
+          label="Recorded eligible-category weight"
+          value={`${kpis.eligibleCategoryKg.toLocaleString("en-US")} kg`}
           hint={
-            kpis.diversionRate === null
+            kpis.eligibleCategorySharePct === null
               ? "No denominator available"
-              : `${kpis.diversionRate}% of recorded material`
+              : `${kpis.eligibleCategorySharePct}% of recorded material`
           }
           icon={Recycle}
         />
@@ -158,9 +158,10 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             </span>
           </div>
           <p style={{ margin: "12px 0 0", maxWidth: 520, color: "var(--ink-muted)", fontSize: 11 }}>
-            Material weights are manually entered or seeded for demonstration. Diversion is recorded plastic,
-            paper, glass and metal divided by all recorded material (or the selected category scope). Any CO₂
-            estimate is not a measured outcome.
+            Material weights are manually entered or seeded for demonstration. The category share is recorded
+            plastic, paper, glass and metal divided by all recorded material (or the selected category scope);
+            it is not verified sorting, downstream recovery, or diversion. Any CO₂e estimate is illustrative,
+            not a measured outcome.
           </p>
         </section>
       </div>

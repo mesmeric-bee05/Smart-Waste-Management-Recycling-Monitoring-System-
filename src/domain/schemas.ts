@@ -107,4 +107,19 @@ export const userInviteSchema = z
   })
   .strict();
 
+export const firstAdminBootstrapSchema = z
+  .object({
+    organizationName: z.string().trim().min(2).max(80),
+    fullName: z.string().trim().min(2).max(80),
+    email: z
+      .string()
+      .trim()
+      .email()
+      .max(254)
+      .transform((value) => value.toLowerCase())
+      .refine((value) => !value.endsWith("@example.test")),
+    password: z.string().min(16).max(128),
+  })
+  .strict();
+
 export type PointInput = z.infer<typeof pointSchema>;

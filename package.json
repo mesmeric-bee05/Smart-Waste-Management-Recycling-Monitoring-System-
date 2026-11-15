@@ -22,6 +22,7 @@
     "db:deploy": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
+    "test:bootstrap-concurrency": "tsx scripts/test-first-admin-bootstrap-concurrency.ts",
     "e2e": "playwright test"
   },
   "dependencies": {

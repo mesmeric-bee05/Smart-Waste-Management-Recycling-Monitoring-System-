@@ -127,8 +127,8 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
                 <span className="activity-mark" />
                 <div>
                   <div className="activity-text">
-                    <strong>{data.kpis.recycledKg.toLocaleString("en-US")} kg</strong> recorded recyclable
-                    material
+                    <strong>{data.kpis.eligibleCategoryKg.toLocaleString("en-US")} kg</strong> recorded
+                    potentially recyclable-category material
                   </div>
                   <div className="activity-time">Zone: {zone || "all zones"}</div>
                 </div>

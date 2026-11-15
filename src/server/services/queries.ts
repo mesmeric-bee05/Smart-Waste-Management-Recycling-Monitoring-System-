@@ -127,7 +127,7 @@ export async function getDashboardData(filters: DashboardFilters = {}) {
   const categoryTotals = new Map<string, number>();
   const dailyTotals = new Map<string, number>();
   let totalKg = 0;
-  let recycledKg = 0;
+  let eligibleCategoryKg = 0;
   let simulated = false;
   for (const collection of collections.slice(0, 10000)) {
     simulated ||= collection.isSimulated || collection.source === "SIMULATED";
@@ -136,7 +136,8 @@ export async function getDashboardData(filters: DashboardFilters = {}) {
       totalKg += material.weightKg;
       categoryTotals.set(material.category, (categoryTotals.get(material.category) ?? 0) + material.weightKg);
       dailyTotals.set(day, (dailyTotals.get(day) ?? 0) + material.weightKg);
-      if (["PLASTIC", "PAPER", "GLASS", "METAL"].includes(material.category)) recycledKg += material.weightKg;
+      if (["PLASTIC", "PAPER", "GLASS", "METAL"].includes(material.category))
+        eligibleCategoryKg += material.weightKg;
     }
   }
   const categoryData = [...categoryTotals].map(([name, value]) => ({
@@ -156,8 +157,8 @@ export async function getDashboardData(filters: DashboardFilters = {}) {
       completed,
       requestsOpen,
       totalKg: Number(totalKg.toFixed(1)),
-      recycledKg: Number(recycledKg.toFixed(1)),
-      diversionRate: totalKg ? Number(((recycledKg / totalKg) * 100).toFixed(1)) : null,
+      eligibleCategoryKg: Number(eligibleCategoryKg.toFixed(1)),
+      eligibleCategorySharePct: totalKg ? Number(((eligibleCategoryKg / totalKg) * 100).toFixed(1)) : null,
     },
     categoryData,
     trendData,
