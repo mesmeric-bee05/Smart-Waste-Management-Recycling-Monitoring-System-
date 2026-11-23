@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { randomBytes } from "node:crypto";
 import { hasValidFirstAdminBootstrapToken } from "@/server/bootstrap-token";
 
-const token = "a1b2c3d4e5f60718293a4b5c6d7e8f90123456789abcdef0011223344556677";
+const token = randomBytes(32).toString("hex");
 
 describe("first-admin bootstrap bearer token", () => {
   it("is disabled without a configured token", () => {

@@ -64,7 +64,9 @@ export async function bootstrapFirstAdmin(
 
   return dependencies.database.$transaction(
     async (tx) => {
-      await tx.$queryRaw`SELECT pg_advisory_xact_lock(${ADVISORY_LOCK_NAMESPACE}, ${ADVISORY_LOCK_ID})`;
+      await tx.$queryRaw<Array<{ acquired: number }>>`
+        SELECT 1 AS acquired FROM pg_advisory_xact_lock(${ADVISORY_LOCK_NAMESPACE}, ${ADVISORY_LOCK_ID})
+      `;
 
       // The lock serializes callers; READ COMMITTED gives the next statement a fresh snapshot
       // so a waiter sees an administrator committed by the prior lock holder.

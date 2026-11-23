@@ -37,7 +37,7 @@
     "framer-motion": "14.7.1",
     "leaflet": "1.9.4",
     "lucide-react": "1.63.0",
-    "next": "16.4.3",
+    "next": "16.4.6",
     "next-auth": "5.0.0-beta.32",
     "papaparse": "5.7.0",
     "pg": "8.23.1",
@@ -62,7 +62,7 @@
     "@types/react-dom": "19.2.3",
     "@types/three": "0.186.0",
     "eslint": "9.39.5",
-    "eslint-config-next": "16.4.3",
+    "eslint-config-next": "16.4.6",
     "prettier": "3.9.10",
     "prettier-plugin-prisma": "5.0.0",
     "tailwindcss": "4.3.3",
@@ -72,6 +72,7 @@
   },
   "overrides": {
     "esbuild": "0.28.2",
+    "effect": "3.22.1",
     "minimatch": "11.0.3"
   }
 }

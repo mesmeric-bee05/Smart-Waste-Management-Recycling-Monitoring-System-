@@ -20,8 +20,11 @@ function createFixture({
   users?: number;
   organizations?: Array<{ id: string; slug: string }>;
 } = {}) {
+  const advisoryLockQuery = vi.fn(async (_query: TemplateStringsArray, ..._values: unknown[]) => [
+    { acquired: 1 },
+  ]);
   const tx = {
-    $queryRaw: vi.fn(async () => []),
+    $queryRaw: advisoryLockQuery,
     organization: {
       findMany: vi.fn(async () => organizations),
       create: vi.fn(async () => ({ id: "organization-1", slug: "wasteops-demo" })),
@@ -38,7 +41,7 @@ function createFixture({
     ),
   } as unknown as FirstAdminBootstrapDatabase;
   const hashPassword = vi.fn(async (password: string) => `argon2id:${password.length}`);
-  return { tx, database, hashPassword };
+  return { tx, database, hashPassword, advisoryLockQuery };
 }
 
 describe("first administrator bootstrap", () => {
@@ -50,7 +53,10 @@ describe("first administrator bootstrap", () => {
     expect(fixture.database.$transaction).toHaveBeenCalledWith(expect.any(Function), {
       isolationLevel: "ReadCommitted",
     });
-    expect(fixture.tx.$queryRaw).toHaveBeenCalledTimes(1);
+    expect(fixture.advisoryLockQuery).toHaveBeenCalledOnce();
+    expect(fixture.advisoryLockQuery.mock.calls[0]?.[0]?.join("?")).toContain(
+      "SELECT 1 AS acquired FROM pg_advisory_xact_lock",
+    );
     expect(fixture.tx.organization.create).toHaveBeenCalledWith({
       data: { name: "WasteOps Customer", slug: "wasteops-demo" },
     });

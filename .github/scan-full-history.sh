@@ -19,5 +19,6 @@ if [[ ! "$commit_count" =~ ^[1-9][0-9]*$ ]]; then
 fi
 
 printf 'Scanning all %s reachable Git commits, including roots and merge diffs.\n' "$commit_count"
-git log --all --full-history --root -m -p --no-ext-diff --no-color |
-  "$gitleaks_bin" stdin --redact --no-color --verbose
+"$gitleaks_bin" git . \
+  --log-opts='--all --full-history --root -m -p --no-ext-diff --no-color' \
+  --redact --no-color --verbose

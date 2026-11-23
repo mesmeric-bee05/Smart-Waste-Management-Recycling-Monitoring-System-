@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { randomBytes } from "node:crypto";
 
 const { allowRequestMock, bootstrapMock } = vi.hoisted(() => ({
   allowRequestMock: vi.fn<(request: Request, scope: string, maximum: number, windowMs: number) => boolean>(
@@ -17,7 +18,7 @@ vi.mock("@/server/services/first-admin-bootstrap", () => ({
 
 import { POST } from "./route";
 
-const token = "a1b2c3d4e5f60718293a4b5c6d7e8f90123456789abcdef0011223344556677";
+const token = randomBytes(32).toString("hex");
 const validPayload = {
   organizationName: "WasteOps Customer",
   fullName: "Initial Administrator",
