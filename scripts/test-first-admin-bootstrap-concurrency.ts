@@ -53,6 +53,20 @@ try {
     (result) => result.status === "rejected" && result.reason instanceof FirstAdminBootstrapConflictError,
   );
   if (successful.length !== 1 || conflicts.length !== 1) {
+    const outcomeSummary = results.map((result) =>
+      result.status === "fulfilled"
+        ? { status: "fulfilled" }
+        : {
+            status: "rejected",
+            errorName: result.reason instanceof Error ? result.reason.name : "UnknownError",
+            errorCode:
+              typeof result.reason === "object" && result.reason !== null && "code" in result.reason
+                ? String(result.reason.code)
+                : undefined,
+            expectedConflict: result.reason instanceof FirstAdminBootstrapConflictError,
+          },
+    );
+    console.error("Sanitized bootstrap concurrency outcomes:", JSON.stringify(outcomeSummary));
     throw new Error("Concurrent bootstrap did not produce exactly one administrator and one conflict.");
   }
 

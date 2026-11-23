@@ -2,15 +2,19 @@ import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient, Role, WasteCategory, CollectionStatus } from "@/generated/prisma/client";
 import * as argon2 from "argon2";
+import { getPostgresSchema } from "../src/server/postgres-schema";
 
 const connectionString = process.env.POSTGRES_DATABASE_URL;
 if (!connectionString) throw new Error("POSTGRES_DATABASE_URL is required to seed the local database.");
-const adapter = new PrismaPg({
-  connectionString,
-  max: 10,
-  connectionTimeoutMillis: 5_000,
-  idleTimeoutMillis: 30_000,
-});
+const adapter = new PrismaPg(
+  {
+    connectionString,
+    max: 10,
+    connectionTimeoutMillis: 5_000,
+    idleTimeoutMillis: 30_000,
+  },
+  { schema: getPostgresSchema(connectionString) },
+);
 const prisma = new PrismaClient({ adapter });
 const categories: WasteCategory[] = ["PLASTIC", "PAPER", "GLASS", "METAL", "ORGANIC", "RESIDUAL"];
 const recyclable = new Set<WasteCategory>(["PLASTIC", "PAPER", "GLASS", "METAL"]);
